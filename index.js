@@ -5,8 +5,8 @@ const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const cors = require("cors");
-const {S3Client,PutObjectCommand } = require('@aws-sdk/client-s3');
-const {getSignedUrl} = require('@aws-sdk/s3-request-presigner');
+// const {S3Client,PutObjectCommand } = require('@aws-sdk/client-s3');
+// const {getSignedUrl} = require('@aws-sdk/s3-request-presigner');
 const bcrypt = require('bcryptjs');
 
 const cloudinary = require('cloudinary').v2;
@@ -16,13 +16,13 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 require("dotenv").config();
 
-const s2Client = new S3Client({ 
-    region: 'eu-north-1',
-    credentials: {
-        accessKeyId:process.env.ACCESS_KEY_ID,
-        secretAccessKey:process.env.SECRET_ACCESS_KEY
-    }
-});
+// const s2Client = new S3Client({ 
+//     region: 'eu-north-1',
+//     credentials: {
+//         accessKeyId:process.env.ACCESS_KEY_ID,
+//         secretAccessKey:process.env.SECRET_ACCESS_KEY
+//     }
+// });
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -100,16 +100,16 @@ const { timeStamp } = require("console");
 //     return url;
 // }
 
-async function getPutObjectSignedUrl(filename, contentType) {
-    const params = {
-        Bucket: "poopooshop",
-        Key: `images/${filename}`,
-        ContentType: contentType,
-    };
+// async function getPutObjectSignedUrl(filename, contentType) {
+//     const params = {
+//         Bucket: "poopooshop",
+//         Key: `images/${filename}`,
+//         ContentType: contentType,
+//     };
 
-    const url = await getSignedUrl(s2Client, new PutObjectCommand(params), { expiresIn: 900 });
-    return url;
-}
+//     const url = await getSignedUrl(s2Client, new PutObjectCommand(params), { expiresIn: 900 });
+//     return url;
+// }
 
 //API Creation
 
@@ -118,17 +118,17 @@ app.get("/", async (req, res)=>{
 })
 
 // Endpoint to get a signed URL for uploading a file
-app.get('/upload', async (req, res) => {
-    const filename = "test.mp4";
-    const contentType = "video/mp4";
-    try {
-        const url = await getPutObjectSignedUrl(filename, contentType);
-        res.json({ url });
-    } catch (error) {
-        console.error("Error generating signed URL", error);
-        res.status(500).send("Error generating signed URL");
-    }
-});
+// app.get('/upload', async (req, res) => {
+//     const filename = "test.mp4";
+//     const contentType = "video/mp4";
+//     try {
+//         const url = await getPutObjectSignedUrl(filename, contentType);
+//         res.json({ url });
+//     } catch (error) {
+//         console.error("Error generating signed URL", error);
+//         res.status(500).send("Error generating signed URL");
+//     }
+// });
 
 // Setting up multer middleware for handling multipart/form-data
 // const storage = multer.memoryStorage();
