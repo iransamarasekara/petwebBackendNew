@@ -5,24 +5,16 @@ const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const cors = require("cors");
-// const {S3Client,PutObjectCommand } = require('@aws-sdk/client-s3');
-// const {getSignedUrl} = require('@aws-sdk/s3-request-presigner');
 const bcrypt = require('bcryptjs');
 
 const cloudinary = require('cloudinary').v2;
 const bodyParser = require('body-parser');
+const multer = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 require("dotenv").config();
-
-// const s2Client = new S3Client({ 
-//     region: 'eu-north-1',
-//     credentials: {
-//         accessKeyId:process.env.ACCESS_KEY_ID,
-//         secretAccessKey:process.env.SECRET_ACCESS_KEY
-//     }
-// });
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -35,6 +27,17 @@ const Mailgen = require('mailgen');
 
 app.use(express.json());
 const allowedOrigins = ['https://poo-poo-shop.netlify.app', 'https://poopooshop.lk', 'http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174', 'https://poo-poo-shop-admin-dashboard.netlify.app']; // Add your frontend URLs here
+
+// Configure Multer Storage for Cloudinary
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: 'images',
+      public_id: (req, file) => `${file.originalname.split('.')[0]}_${Date.now()}`,
+    },
+  });
+  
+  const upload = multer({ storage });
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -61,110 +64,32 @@ mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
 
 const { timeStamp } = require("console");
 
-// Multer Storage Configuration for Cloudinary
-// const storage = new CloudinaryStorage({
-//     cloudinary: cloudinary,
-//     params: {
-//       folder: "products", // Folder name in Cloudinary
-//       allowed_formats: ["jpg", "jpeg", "png"],
-//     },
-//   });
-
-//   const upload = multer({ storage });
-
-
-// async function getObjectURL(key){
-//     const params = {
-//         Bucket: "moramerch",
-//         Key: key,
-        
-//     }
-
-//     try {
-//         const url = await getSignedUrl(s2Client, new GetObjectCommand(params), { expiresIn: 900 });
-//         return url;
-//     } catch (error) {
-//         console.error("Error generating signed URL", error);
-//         return null;
-//     }
-// }
-
-// async function putObject(filename, contentType){
-//     const params = {
-//         Bucket: "moramerch",
-//         Key: 'myfiles/' + filename,
-//         contentType: contentType,
-//     }
-
-//     const url = await getSignedUrl(s2Client, new PutObjectCommand(params));
-//     return url;
-// }
-
-// async function getPutObjectSignedUrl(filename, contentType) {
-//     const params = {
-//         Bucket: "poopooshop",
-//         Key: `images/${filename}`,
-//         ContentType: contentType,
-//     };
-
-//     const url = await getSignedUrl(s2Client, new PutObjectCommand(params), { expiresIn: 900 });
-//     return url;
-// }
-
-//API Creation
-
 app.get("/", async (req, res)=>{
     res.send("Express App is Running")
 })
 
-// Endpoint to get a signed URL for uploading a file
-// app.get('/upload', async (req, res) => {
-//     const filename = "test.mp4";
-//     const contentType = "video/mp4";
-//     try {
-//         const url = await getPutObjectSignedUrl(filename, contentType);
-//         res.json({ url });
-//     } catch (error) {
-//         console.error("Error generating signed URL", error);
-//         res.status(500).send("Error generating signed URL");
-//     }
-// });
-
-// Setting up multer middleware for handling multipart/form-data
-// const storage = multer.memoryStorage();
-// const upload = multer({ storage: storage });
-
-// Creating upload endpoint for images
-app.post('/upload', async (req, res) => {
-    const files = req.body.images; // Assuming images are sent as base64 strings
-    if (!files || files.length === 0) {
-      return res.status(400).send('No files uploaded.');
-    }
-  
+app.post('/upload', upload.any(), async (req, res) => {
     try {
-      const uploadedFileUrls = [];
-  
-      // Iterate over each file in the files array
-      for (const file of files) {
-        const result = await cloudinary.uploader.upload(file, {
-          folder: 'images',
-          public_id: `${path.basename(file, path.extname(file))}_${Date.now()}`,
-        });
-  
-        // Store the uploaded file URL
-        uploadedFileUrls.push(result.secure_url);
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ success: false, message: 'No files uploaded.' });
       }
   
+      // Collect the URLs of uploaded images
+      const uploadedFileUrls = req.files.map((file) => file.path);
+  
       res.json({
-        success: 1,
+        success: true,
         image_urls: uploadedFileUrls, // Return all uploaded file URLs
       });
     } catch (error) {
-      console.error('Error uploading files to Cloudinary', error);
-      res.status(500).send('Error uploading files to Cloudinary');
+      console.error('Error uploading files to Cloudinary:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error uploading files to Cloudinary',
+        error: error.message,
+      });
     }
   });
-
 
 // //photo upload
 // app.get('/upload', async (req, res) =>{
